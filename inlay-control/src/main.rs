@@ -13,18 +13,18 @@ use ipc::DataPlaneClient;
 async fn main() -> Result<()> {
     // Initialize logging
     env_logger::init();
-    
+
     info!("Starting Inlay Control Plane Daemon");
-    
+
     // Connect to data plane daemon
     info!("Connecting to data plane daemon...");
     let socket_path = "/tmp/inlay-data.sock";
     let data_plane = DataPlaneClient::new(socket_path);
-    
+
     // Start API server
     let api_listener = TcpListener::bind("127.0.0.1:3000").await?;
     info!("API server listening on 127.0.0.1:3000");
-    
+
     // For demonstration, add a test peer
     let mut test_public_key = [0u8; 32];
     test_public_key[0] = 1;
@@ -34,7 +34,7 @@ async fn main() -> Result<()> {
         None,
     ).await?;
     info!("Added test peer");
-    
+
     // Handle API requests and signals
     loop {
         tokio::select! {
@@ -53,10 +53,11 @@ async fn main() -> Result<()> {
             }
         }
     }
-    
+
     Ok(())
 }
 
+// Handle API request
 // Handle API request
 async fn handle_api_request(
     mut socket: tokio::net::TcpStream,
@@ -64,16 +65,30 @@ async fn handle_api_request(
 ) -> Result<()> {
     // Simplified API handling - would be more complex in reality
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    
+
     let mut buffer = [0u8; 1024];
     let _ = socket.read(&mut buffer).await?;
-    
+
     // Get status from data plane
     let status = data_plane.get_status().await?;
-    
+
+    // Format the response
+    let body = format!("Inlay VPC Status: {:?}\n", status);
+
+    // Create a proper HTTP response
+    let response = format!(
+        "HTTP/1.1 200 OK\r\n\
+        Content-Type: text/plain\r\n\
+        Content-Length: {}\r\n\
+        Connection: close\r\n\
+        \r\n\
+        {}",
+        body.len(),
+        body
+    );
+
     // Send response
-    let response = format!("Inlay VPC Status: {:?}\n", status);
     socket.write_all(response.as_bytes()).await?;
-    
+
     Ok(())
 }
