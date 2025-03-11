@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "inlay-protocol",
+    "inlay-data",
+    "inlay-control",
+]
+resolver = "2"
